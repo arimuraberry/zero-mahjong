@@ -312,7 +312,6 @@ table.tbl{border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-n
   body.solo-mode .nav button{flex-direction:row;gap:6px;padding:4px 0}
   body.solo-mode .nav .mt{width:17px;height:22px;font-size:11px;border-radius:4px}
 }
-}
 
 /* overlay */
 .overlay{position:fixed;inset:0;background:rgba(5,20,14,.55);display:flex;align-items:flex-end;justify-content:center;z-index:50}
@@ -344,7 +343,7 @@ table.tbl{border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-n
 .table4 .rl{font-size:11px;font-weight:900;color:#bfe3d3;line-height:1.2;padding-top:2px}
 .table4 .rl small{display:block;font-size:10px;opacity:.75}
 .table4 .rv.me .rl{color:#ffe3a3}
-.table4 .rt{display:flex;flex-wrap:wrap;gap:2px;min-height:23px;align-items:flex-end}
+.table4 .rt{display:flex;flex-wrap:nowrap;gap:2px;min-height:24px;align-items:flex-end;overflow:hidden}
 .table4 .rt .tile{--tw:17px}
 .table4 .empty{color:#6f9c88;font-size:12px}
 .tile.called{opacity:.3}
@@ -392,10 +391,9 @@ table.tbl{border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-n
 .lab2{font-size:11px;font-weight:900;color:var(--muted);align-self:center}
 .s-status:empty{display:none}
 @media (orientation: landscape) and (max-height: 540px){
-  body.solo-mode .table4{grid-template-columns:1fr 1fr;gap:4px 10px;padding:6px 8px}
+  body.solo-mode .table4{gap:3px;padding:6px 8px}
   body.solo-mode .table4 .rv{grid-template-columns:34px minmax(0,1fr);gap:4px}
   body.solo-mode .table4 .rl{font-size:10px;white-space:nowrap}
-  body.solo-mode .table4 .rt .tile{--tw:14px}
   body.solo-mode .table4 .rt{min-height:19px}
   body.solo-mode .hand2{margin-inline:0;justify-content:center;padding-top:16px}
   body.solo-mode .hand2 .grp{flex:0 0 auto !important}
@@ -410,6 +408,29 @@ table.tbl{border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-n
   body.solo-mode .s-status{grid-column:2;grid-row:2 / span 1}
 }
 @media (min-width:600px){ .hand2{margin-inline:0} }
+
+
+.table4 .rt .tile{--tw:var(--rtw,17px)}
+.overlay.modal{align-items:center;padding:16px;padding-top:max(16px,env(safe-area-inset-top,0px));padding-bottom:max(16px,env(safe-area-inset-bottom,0px))}
+.sheet.modal{border-radius:22px;max-width:480px;max-height:100%;padding:20px 18px;animation:pop .32s cubic-bezier(.2,1.25,.4,1);box-shadow:0 20px 60px rgba(0,0,0,.35);border:1px solid var(--line)}
+@keyframes pop{from{transform:scale(.82);opacity:0}to{transform:none;opacity:1}}
+.sheet.modal .wc1,.sheet.modal .wc2{display:flex;flex-direction:column;gap:10px;min-width:0}
+.win-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.win-head .win-title{animation:stamp .45s cubic-bezier(.2,1.4,.4,1)}
+@keyframes stamp{0%{transform:scale(1.8) rotate(-8deg);opacity:0}100%{transform:none;opacity:1}}
+.win-hand{display:flex;align-items:flex-end;flex-wrap:wrap;gap:0;row-gap:6px}
+.win-hand .wgap{width:6px;flex:none}
+.win-hand{container-type:inline-size;flex-wrap:nowrap}
+.win-hand .trow{gap:1px;flex-wrap:nowrap}
+.win-hand .tile{--tw:min(26px, calc(100cqw / 15.5))}
+.btnrow{display:flex;gap:10px}
+.btnrow .btn{flex:1;padding:0 10px}
+@media (orientation: landscape) and (max-height: 540px){
+  .sheet.modal.win{max-width:min(860px,100%);display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:10px 22px;padding:14px 18px}
+  .sheet.modal .win-title{font-size:36px}
+  .sheet.modal .win-pts{font-size:24px}
+  .sheet.modal .ylist div{padding:6px 12px}
+}
 
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -565,6 +586,28 @@ function analyze14(tiles14, visible, nm = 0){
   return {res, bestS: bs, bestN: bn, best};
 }
 
+// 初心者向けの「残す価値」。字牌は役牌ほど高く、数牌は真ん中ほど高い。ドラはさらに高い
+function keepValue(t, opt = {}){
+  let v;
+  if(t >= 27){
+    const yh = (t >= 31 ? 1 : 0) + (t === (opt.round ?? 27) ? 1 : 0) + (t === (opt.seat ?? 27) ? 1 : 0);
+    v = yh === 0 ? 0 : yh === 1 ? 3 : 5;
+  } else { const n = t % 9; v = (n === 0 || n === 8) ? 2 : (n === 1 || n === 7) ? 4 : 6; }
+  if((opt.doras || []).includes(t)) v += 4;
+  return v;
+}
+// 同じシャンテン数の中から「捨てる牌」を選ぶ。序盤（2シャンテン以上）は牌の価値を重く、終盤は受け入れ枚数を重く見る
+function rankDiscards(an, opt = {}){
+  const ok = Object.keys(an.res).map(Number).filter(t => !(opt.exclude || []).includes(t));
+  let bs = 99; for(const t of ok) bs = Math.min(bs, an.res[t].s);
+  const cands = ok.filter(t => an.res[t].s === bs);
+  const score = t => bs >= 2 ? an.res[t].n - 3*keepValue(t, opt) : an.res[t].n*10 - keepValue(t, opt);
+  let top = -1e9; for(const t of cands) top = Math.max(top, score(t));
+  an.best = cands.filter(t => score(t) === top);
+  an.bestS = bs; an.bestN = an.best.length ? an.res[an.best[0]].n : 0;
+  an.score = score;
+  return an;
+}
 // ===== 役・符・点数 =====
 const isShun = g => g[0] !== g[1];
 function calcPoints(han, fu, dealer, tsumo, yakuman = 0){
@@ -1290,7 +1333,8 @@ function show(v){
   window.scrollTo(0,0);
   store.set('view', NAV_OF[v]);
 }
-function goSolo(){ if(!G.wall) soloNew(); else soloRender(); show('solo'); }
+function goSolo(){ if(!G.wall) soloNew(); else soloRender(); show('solo'); fitRivers($('#v-solo')); }
+window.addEventListener('resize', () => { if(!$('#v-solo').hidden) fitRivers($('#v-solo')); });
 document.querySelectorAll('[data-nav]').forEach(b => b.addEventListener('click', () => {
   const v = b.getAttribute('data-nav');
   if(v === 'learn'){ renderLearn(); show('learn'); }
@@ -1700,6 +1744,7 @@ function visibleTiles(){
 function baseCtx(extra){
   return Object.assign({round:27, seat:27, dealer:true, dora:G.doraInds, ura:G.uraInds, melds:G.melds, riichi:G.riichi, doubleRiichi:G.double, ippatsu:G.riichi && G.ippatsu}, extra);
 }
+function rankOpt(extra){ return Object.assign({round:27, seat:27, doras:G.doraInds.map(doraOf)}, extra); }
 function myRiverTypes(){ return G.rivers[0].map(d => d.t); }
 
 // ---- 自分のツモ ----
@@ -1717,7 +1762,7 @@ function myDraw(rinshan){
     const r = evaluate(c, baseCtx({win:G.drawn, tsumo:true, haitei:G.wall.length === 0 && !rinshan, rinshan, tenhou:G.firstTurn && nm() === 0}));
     if(r && r.yaku.length) G.tsumoRes = r; else G.tsumoNoYaku = true;
   }
-  G.an = analyze14(all, visibleTiles(), nm());
+  G.an = rankDiscards(analyze14(all, visibleTiles(), nm()), rankOpt());
   soloRender();
   if(G.riichi && !G.tsumoRes) later(() => myDiscard(G.drawn, true), 750);
 }
@@ -1756,7 +1801,12 @@ function myDiscard(t, auto = false){
   if(!auto && G.hint && G.an){
     const mine = G.an.res[t], bestT = G.an.best;
     if(bestT.includes(t)) G.fb = {k:'good', html:`<b>ナイス！</b> いちばんいい捨て方。`};
-    else if(mine.s === G.an.bestS) G.fb = {k:'ok', html:`<b>悪くない！</b> でも ${inlineT(bestT.slice(0,3))} を捨てると、上がりに近づく牌が <b>${G.an.bestN}枚</b>（今の捨て方だと ${mine.n}枚）。`};
+    else if(mine.s === G.an.bestS){
+      const pr = {parts: mergeAttached(partsOf(counts(myConcealed()), nm()).parts)};
+      G.fb = mine.n < G.an.bestN
+        ? {k:'ok', html:`<b>悪くない！</b> でも ${inlineT(bestT.slice(0,3))} を捨てると、上がりに近づく牌が <b>${G.an.bestN}枚</b>（今の捨て方だと ${mine.n}枚）。`}
+        : {k:'ok', html:`<b>悪くない！</b> ただ、先に切るなら ${inlineT(bestT.slice(0,1))}。${discardReason(bestT[0], pr.parts)}。${keepNote(t)}`};
+    }
     else G.fb = {k:'bad', html:`<b>おっと</b>、テンパイから1歩遠くなった。${inlineT(bestT.slice(0,3))} を捨てるのがおすすめだったよ。`};
   } else if(!auto) G.fb = null;
   const tsumogiri = G.drawn === t;
@@ -1888,11 +1938,9 @@ function doCall(kind, pr){
     if(t < a && b%9 <= 7 && b === a+1) G.kuikae.push(b+1);
     if(t > b && a%9 >= 1 && b === a+1) G.kuikae.push(a-1);
   }
+  if(G.hands[0].every(x => G.kuikae.includes(x))) G.kuikae = [];
   G.phase = 'afterCall'; G.drawn = null;
-  G.an = analyze14(G.hands[0], visibleTiles(), nm());
-  // 喰い替えで捨てられない牌はおすすめから外す
-  G.an.best = G.an.best.filter(x => !G.kuikae.includes(x));
-  if(!G.an.best.length){ let bs = 99, bn = -1, bt = []; for(const x in G.an.res){ const r = G.an.res[x]; if(G.kuikae.includes(+x)) continue; if(r.s < bs || (r.s === bs && r.n > bn)){ bs = r.s; bn = r.n; bt = [+x]; } else if(r.s === bs && r.n === bn) bt.push(+x); } G.an.best = bt; G.an.bestS = bs; G.an.bestN = bn; }
+  G.an = rankDiscards(analyze14(G.hands[0], visibleTiles(), nm()), rankOpt({exclude:G.kuikae}));
   G.fb = {k:'good', html:`<b>${kind === 'pon' ? 'ポン' : 'チー'}！</b> ${SEAT_LABEL[o.from]}の捨て牌をもらった。ツモはせずに1枚捨てる。${G.kuikae.length ? `<br><span class="small">同じ牌${G.kuikae.length > 1 ? '・すじ' : ''}をすぐ捨てるのは禁止（喰い替え）。</span>` : ''}`};
   soloRender();
 }
@@ -1908,20 +1956,24 @@ function soloWin(kind){
   soloRender();
   const pts = r.points;
   const payText = kind === 'tsumo' ? `親のツモなので子3人から ${pts.text}（合計 <b>${pts.total}点</b>）` : `${SEAT_LABEL[from]}が <b>${pts.total}点</b> 払う`;
+  const winHand = kind === 'tsumo' ? [...G.hands[0]] : [...G.hands[0]];
   openSheet(`
-    <div class="win-title">${kind === 'tsumo' ? 'ツモ！' : 'ロン！'}</div>
-    <div><div class="win-pts">${kind === 'tsumo' ? pts.text : pts.total + '点'}${pts.label ? ` <span class="chip red" style="vertical-align:middle">${pts.label}</span>` : ''}</div>
-      <p class="small muted">${payText}</p></div>
-    ${groupsHTML(parseToGroups(r.p),'sm')}
-    ${G.melds.length ? `<div class="row small"><span>鳴いた牌</span>${G.melds.map(m => row(m.tiles,'xs')).join('')}</div>` : ''}
-    <div class="row small"><span>上がり牌</span>${row([winT],'xs')}<span>${r.yakuman ? '' : `（${WAIT_NAME[r.wait] || ''}待ち）`}</span></div>
-    <div class="stack" style="gap:8px"><h3>ついた役</h3><div class="ylist">${r.yaku.map(y => `<div><b>${y[0]}</b><span>${r.yakuman ? '役満' : y[1] + '翻'}</span></div>`).join('')}</div>
-      ${r.yakuman ? '' : `<p class="small">合計 <b>${r.han}翻 ${r.fu}符</b></p>`}</div>
-    <div class="row small"><span>ドラ表示</span>${row(G.doraInds,'xs')}${G.riichi ? `<span>裏ドラ表示</span>${row(G.uraInds,'xs')}` : ''}</div>
-    ${r.yakuman ? '' : `<details class="card small"><summary><b>符の内訳を見る</b></summary><div style="margin-top:8px">${fuBreakdownHTML(r)}</div></details>`}
-    <p class="small muted">通算 ${st.wins}勝 / ${st.plays}局</p>
-    <button class="btn wide" data-sheet-new>もう1局</button>
-    <button class="btn wide sub" data-sheet-close>卓を見る</button>`);
+    <div class="wc1">
+      <div class="win-head"><div class="win-title">${kind === 'tsumo' ? 'ツモ！' : 'ロン！'}</div>
+        <div><div class="win-pts">${kind === 'tsumo' ? pts.text : pts.total + '点'}</div>${pts.label ? `<span class="chip red">${pts.label}</span>` : ''}</div></div>
+      <p class="small muted">${payText}</p>
+      <div class="win-hand">${row(winHand.sort(byNum),'sm')}<span class="wgap"></span>${row([winT],'sm',[0])}${G.melds.map(m => `<span class="wgap"></span>${row(m.tiles,'xs')}`).join('')}</div>
+      <p class="small">${kind === 'tsumo' ? '自分でひいた' : SEAT_LABEL[from] + 'が捨てた'} ${inlineT([winT])} で完成${r.yakuman ? '' : `（${WAIT_NAME[r.wait] || ''}待ち）`}。分けるとこう：</p>
+      ${groupsHTML(parseToGroups(r.p),'xs')}
+    </div>
+    <div class="wc2">
+      <div class="stack" style="gap:6px"><h3>ついた役</h3><div class="ylist">${r.yaku.map(y => `<div><b>${y[0]}</b><span>${r.yakuman ? '役満' : y[1] + '翻'}</span></div>`).join('')}</div>
+        ${r.yakuman ? '' : `<p class="small">合計 <b>${r.han}翻 ${r.fu}符</b></p>`}</div>
+      <div class="row small"><span>ドラ表示</span>${row(G.doraInds,'xs')}${G.riichi ? `<span>裏ドラ表示</span>${row(G.uraInds,'xs')}` : ''}</div>
+      ${r.yakuman ? '' : `<details class="card small"><summary><b>符の内訳を見る</b></summary><div style="margin-top:8px">${fuBreakdownHTML(r)}</div></details>`}
+      <p class="small muted">通算 ${st.wins}勝 / ${st.plays}局</p>
+      <div class="btnrow"><button class="btn sub" data-sheet-close>卓を見る</button><button class="btn" data-sheet-new>もう1局</button></div>
+    </div>`, 'win');
 }
 function soloRyukyoku(){
   G.over = true; G.phase = 'over'; G.result = 'draw'; soloToken++;
@@ -1932,11 +1984,22 @@ function soloRyukyoku(){
     <div class="win-title" style="color:var(--felt)">流局</div>
     <p>山がなくなった。</p>
     ${s === 0 ? `<div class="note"><b>テンパイで終われた！</b> 待ちは ${inlineT(w)}。ノーテンの人からテンパイ料がもらえて、親なので<b>連荘</b>。</div>` : `<div class="tip">テンパイまであと<b>${s}枚</b>だった。ノーテンなので本番ならテンパイ料を払う。</div>`}
-    <button class="btn wide" data-sheet-new>もう1局</button>
-    <button class="btn wide sub" data-sheet-close>卓を見る</button>`);
+    <div class="btnrow"><button class="btn sub" data-sheet-close>卓を見る</button><button class="btn" data-sheet-new>もう1局</button></div>`, 'draw');
 }
 
 // ---- ヒント（初心者向けの情報） ----
+// 面子やアタマの隣にある浮き牌は「くっつき」としてその組に入れて見せる（例：3444 は 面子+1）
+function mergeAttached(parts){
+  const out = parts.map(p => ({kind:p.kind, tiles:p.tiles.slice(), plus:0}));
+  for(const f of out){
+    if(f.kind !== 'float' || f.tiles[0] >= 27) continue;
+    const t = f.tiles[0];
+    const host = out.find(p => (p.kind === 'mentsu' || p.kind === 'head' || p.kind === 'pair') && !p.plus && p.tiles[0] < 27 && suitOf(p.tiles[0]) === suitOf(t) && p.tiles.some(x => Math.abs(x - t) <= 2));
+    if(host){ host.tiles.push(t); host.tiles.sort(byNum); host.plus = 1; f.merged = true; }
+  }
+  return out.filter(p => !p.merged);
+}
+const partLabel = p => PART_LABEL[p.kind] + (p.plus ? '+1' : '');
 function waitYakuInfo(c13){
   const waits = waitsOf(c13, nm());
   if(!waits.length) return null;
@@ -1957,13 +2020,31 @@ function waitYakuInfo(c13){
   else yakuText = '<b style="color:var(--red)">役なしで上がれない！</b> 鳴いた手は役牌かタンヤオが必要。';
   return {waits, yakuText, furiten: fr};
 }
+function keepNote(t){
+  if(t >= 27){
+    const yh = [31,32,33].includes(t) ? 1 : 0, dbl = t === 27;
+    if(dbl) return '東は東場の親にとって<b>ダブ東</b>（2翻）。重なればおいしいので残したかった。';
+    if(yh) return `${HONOR[t-27]}は<b>役牌</b>。もう1枚来ればアタマ、3枚で役になるので残したかった。`;
+    return '';
+  }
+  const n = t % 9;
+  if(G.doraInds.map(doraOf).includes(t)) return `${tileShort(t)}は<b>ドラ</b>なので残したかった。`;
+  if(n >= 2 && n <= 6) return `${tileShort(t)}は真ん中の数字で、前後どちらにもつながりやすい。`;
+  return '';
+}
 function discardReason(t, parts){
   const p = parts.find(x => x.tiles.includes(t));
+  const doras = G.doraInds.map(doraOf);
   if(!p) return '上がりに近づく牌がいちばん多く残る';
+  if(p.plus) return `${PART_LABEL[p.kind]}にくっついている1枚。受けを少し広げるけど、ほかの牌より役目が小さい`;
   if(p.kind === 'float'){
-    if(t >= 27) return [27,31,32,33].includes(t) ? 'ポツンと1枚の字牌（役牌だけど、2枚目が来ないなら使いにくい）' : 'ポツンと1枚の<b>オタ風</b>。役にもならず使い道がない';
-    if(isTermHonor(t)) return 'ポツンと1枚の<b>端っこ（1・9）</b>。つながる牌が少ない';
-    return 'どこにもつながっていない<b>浮き牌</b>';
+    const keeps = parts.filter(x => x.kind === 'float' && x.tiles[0] !== t && (x.tiles[0] >= 27 && keepValue(x.tiles[0], {round:27, seat:27}) > 0 || doras.includes(x.tiles[0]))).map(x => x.tiles[0]);
+    const keepText = keeps.length ? `（${keeps.map(tileShort).join('・')}は${keeps.every(k => k >= 27) ? '役牌' : keeps.every(k => doras.includes(k)) ? 'ドラ' : '役牌やドラ'}なので残す）` : '';
+    if(t >= 27) return ([27,31,32,33].includes(t) ? 'ポツンと1枚の字牌（役牌だけど、ほかに捨てる牌がない）' : 'ポツンと1枚の<b>オタ風</b>。役にもならず使い道がない') + keepText;
+    if(isTermHonor(t)) return 'ポツンと1枚の<b>端っこ（1・9）</b>。つながる牌が少ない' + keepText;
+    const n = t % 9;
+    if(n === 1 || n === 7) return 'ポツンと1枚の<b>2・8</b>。真ん中の牌より伸びにくい' + keepText;
+    return 'どこにもつながっていない<b>浮き牌</b>' + keepText;
   }
   if(p.kind === 'taatsu') return 'ターツが多すぎる。形の悪いターツ（嵌張・辺張）から減らす';
   if(p.kind === 'pair') return '対子が多すぎるので1つ減らす';
@@ -1988,8 +2069,10 @@ function hintPanel(){
   }
   // 自分の番
   const an = G.an; if(!an) return '';
-  const pr = partsOf(counts(myConcealed()), nm());
+  const pr0 = partsOf(counts(myConcealed()), nm());
+  const pr = {s:pr0.s, mode:pr0.mode, parts: pr0.mode === 'chiitoi' ? pr0.parts : mergeAttached(pr0.parts)};
   const cnt = k => pr.parts.filter(x => x.kind === k).length;
+  const plusN = pr.parts.filter(x => x.plus).length;
   const bestT = an.best[0];
   if(bestT === undefined) return '';
   let html = '';
@@ -1997,7 +2080,7 @@ function hintPanel(){
   const head = an.bestS === 0 ? `<span class="big" style="color:var(--red)">テンパイできる！</span>` : `<span class="big">テンパイまで あと${an.bestS}枚</span>`;
   const form = pr.mode === 'chiitoi'
     ? `<span class="pchip k-pair">対子 ${cnt('pair')}</span><span class="pchip k-float">浮き ${cnt('float')}</span> <span class="small">七対子（ペア7組）を狙う形</span>`
-    : `${nm() ? `<span class="pchip k-meld">鳴き ${nm()}</span>` : ''}<span class="pchip k-mentsu">面子 ${cnt('mentsu')}</span><span class="pchip k-head">アタマ ${cnt('head')}</span><span class="pchip k-taatsu">ターツ ${cnt('taatsu')}</span><span class="pchip k-pair">対子 ${cnt('pair')}</span><span class="pchip k-float">浮き ${cnt('float')}</span>`;
+    : `${nm() ? `<span class="pchip k-meld">鳴き ${nm()}</span>` : ''}<span class="pchip k-mentsu">面子 ${cnt('mentsu')}</span><span class="pchip k-head">アタマ ${cnt('head')}</span><span class="pchip k-taatsu">ターツ ${cnt('taatsu')}</span><span class="pchip k-pair">対子 ${cnt('pair')}</span><span class="pchip k-float">浮き ${cnt('float')}</span>${plusN ? `<span class="small">＋1＝隣にくっついた1枚（受けが少し広がる）</span>` : ''}`;
   html += `<div class="status">${head}<div class="pchips">${form}</div>
     <div class="small" style="margin-top:6px">おすすめ：${inlineT([bestT])} を捨てる — ${discardReason(bestT, pr.parts)}。上がりに近づく牌が <b>${an.bestN}枚</b> 残る。</div>`;
   if(an.bestS === 0){
@@ -2024,7 +2107,7 @@ function handItems(){
   if(G.hint && !G.riichi && !G.over && G.phase !== 'wait'){
     const pr = partsOf(counts(all), nm());
     let drawnTagged = false;
-    return {grouped:true, groups: pr.parts.map(p => ({kind:p.kind, tiles:p.tiles.map(t => { const d = !drawnTagged && G.drawn !== null && t === G.drawn && G.phase === 'mine'; if(d) drawnTagged = true; return {t, drawn:d}; })}))};
+    return {grouped:true, groups: mergeAttached(pr.parts).map(p => ({kind:p.kind, plus:p.plus, tiles:p.tiles.map(t => { const d = !drawnTagged && G.drawn !== null && t === G.drawn && G.phase === 'mine'; if(d) drawnTagged = true; return {t, drawn:d}; })}))};
   }
   const items = G.hands[0].map(t => ({t}));
   return {grouped:false, items, drawn: G.drawn};
@@ -2042,7 +2125,7 @@ function handHTML(){
   const h = handItems();
   let idx = 0;
   if(h.grouped){
-    return `<div class="hand2">${h.groups.map(g => `<div class="grp k-${g.kind}" style="flex:${g.tiles.length} ${g.tiles.length} 0"><div class="gt">${g.tiles.map(o => tileBtn(o, idx++)).join('')}</div><span class="gl">${PART_LABEL[g.kind]}</span></div>`).join('')}</div>`;
+    return `<div class="hand2">${h.groups.map(g => `<div class="grp k-${g.kind}" style="flex:${g.tiles.length} ${g.tiles.length} 0"><div class="gt">${g.tiles.map(o => tileBtn(o, idx++)).join('')}</div><span class="gl">${partLabel(g)}</span></div>`).join('')}</div>`;
   }
   return `<div class="hand2 plain">${h.items.map(o => `<div class="grp" style="flex:1 1 0"><div class="gt">${tileBtn(o, idx++)}</div></div>`).join('')}${h.drawn !== null ? `<div class="grp drawn" style="flex:1 1 0"><div class="gt">${tileBtn({t:h.drawn, drawn:true}, idx++)}</div></div>` : ''}</div>`;
 }
@@ -2067,6 +2150,15 @@ function callBarHTML(){
   const passRec = !(o.ron && o.ron.ok) && !(o.pon && o.adv.pon.rec) && !o.chi.some(pr => o.adv['chi' + pr.join('-')].rec) && !(o.kan && o.adv.kan.rec);
   btns.push(`<button class="btn ${G.hint && passRec ? 'gold' : 'sub'}" data-call="pass">${o.ron && o.ron.ok ? '見逃す' : (btns.length ? 'スルー' : 'OK')}</button>`);
   return `<div class="callbar"><div class="small">${msg}</div>${adv.length ? `<div class="adv small">${adv.map(a => `<div>${a}</div>`).join('')}</div>` : ''}<div class="cbtns">${btns.join('')}</div></div>`;
+}
+// 捨て牌は常に1行。枚数が増えたら牌を小さくして収める
+function fitRivers(el){
+  el.querySelectorAll('.table4 .rt').forEach(rt => {
+    const n = rt.querySelectorAll('.tile').length; if(!n) return;
+    const w = rt.clientWidth; if(!w) return;
+    const tw = Math.max(9, Math.min(18, Math.floor((w - 2*(n-1) - 8) / n)));
+    rt.style.setProperty('--rtw', tw + 'px');
+  });
 }
 function soloRender(){
   const el = $('#v-solo');
@@ -2103,6 +2195,7 @@ function soloRender(){
       <button class="btn wide sub" data-new>最初から配りなおす</button>
     </div>
   </div>`;
+  fitRivers(el);
   el.querySelectorAll('[data-ti]').forEach(b => b.addEventListener('click', () => {
     if(!canAct) return;
     const t = +b.dataset.tt, i = +b.dataset.ti;
@@ -2124,9 +2217,9 @@ function soloRender(){
     else doCall(k);
   }));
 }
-function openSheet(html){
+function openSheet(html, kind = ''){
   const root = $('#overlay-root');
-  root.innerHTML = `<div class="overlay"><div class="sheet" role="dialog" aria-modal="true">${html}</div></div>`;
+  root.innerHTML = `<div class="overlay modal"><div class="sheet modal ${kind}" role="dialog" aria-modal="true">${html}</div></div>`;
   const close = () => { root.innerHTML = ''; };
   root.querySelector('.overlay').addEventListener('click', e => { if(e.target.classList.contains('overlay')) close(); });
   const n = root.querySelector('[data-sheet-new]'); if(n) n.addEventListener('click', () => { close(); soloNew(); window.scrollTo(0,0); });
