@@ -614,6 +614,76 @@ button{-webkit-user-select:none;user-select:none}
   body.solo-mode .hseg{height:28px}
 }
 
+
+/* ---------- 手牌ドック：画面下に固定して、ヒントや鳴きで位置がずれないようにする ---------- */
+.dock{position:fixed;left:0;right:0;bottom:var(--navh,64px);z-index:30;background:var(--bg);border-top:1px solid var(--line);box-shadow:0 -6px 16px rgba(0,0,0,.18)}
+.dock-in{max-width:520px;margin:0 auto;padding:0 8px 6px;--htw:min(46px, calc((100vw - 16px - 8px - 42px) / 14))}
+.drow{display:flex;flex-wrap:wrap;align-items:flex-end}
+.drow .melds{order:-1;flex:0 0 100%;display:flex;justify-content:flex-end;gap:6px;min-height:34px;padding-top:4px;align-items:flex-end}
+.drow .melds .meld{padding-bottom:12px}
+.drow .melds .meld .tile{--tw:18px}
+.hand3{display:flex;gap:3px;align-items:flex-end;padding:20px 0 15px}
+.grp3{display:flex;gap:3px;position:relative;flex:none}
+.grp3::before{content:"";position:absolute;inset:-3px -2px -2px;border:1.5px solid transparent;border-radius:6px;pointer-events:none;z-index:0}
+.grp3.k-mentsu::before{border-color:var(--ok);background:var(--ok-soft)}
+.grp3.k-head::before{border-color:var(--red);background:var(--red-soft)}
+.grp3.k-pair::before{border-color:var(--blue);background:var(--blue-soft)}
+.grp3.k-taatsu::before{border-color:var(--gold);background:var(--gold-soft)}
+.grp3.k-float::before{border-color:var(--line);border-style:dashed}
+.grp3.drawn{margin-left:8px}
+.gl3{position:absolute;left:-2px;right:-2px;bottom:-15px;text-align:center;font-size:9px;font-weight:900;line-height:1.3;white-space:nowrap;overflow:hidden}
+.grp3.k-mentsu .gl3{color:var(--ok)}.grp3.k-head .gl3{color:var(--red)}.grp3.k-pair .gl3{color:var(--blue)}.grp3.k-taatsu .gl3{color:var(--gold)}.grp3.k-float .gl3{color:var(--muted)}
+.gl3.dl{color:var(--felt)}
+.hand3 .slot{width:var(--htw);flex:none;position:relative;z-index:1}
+.hand3 .slot.ph{height:calc(var(--htw) * 4 / 3)}
+.hand3 .tile{width:100%;--tw:var(--htw)}
+.hand3 .tb{display:block;width:100%;transition:transform .12s;position:relative}
+.hand3 .tb.sel{transform:translateY(-9px)}
+.hand3 .tb.dim{opacity:.3}
+.hand3 .tb.isdora .tile{box-shadow:inset 0 0 0 2px var(--red),0 calc(var(--tw)*.09) 0 var(--tile-back)}
+.hand3 .badge{position:absolute;top:-18px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:900;padding:0 5px;border-radius:7px;background:var(--surface2);color:var(--muted);border:1px solid var(--line);line-height:1.45;white-space:nowrap;z-index:2}
+.hand3 .badge.best{background:var(--gold);color:#fff;border-color:var(--gold)}
+.hand3 .dtag{position:absolute;left:0;right:0;bottom:calc(var(--tw)*.09 + 1px);font-size:8.5px;font-weight:900;line-height:1.3;background:var(--felt);color:var(--felt-ink);text-align:center;border-radius:0 0 3px 3px;opacity:.92}
+.dctrl{display:flex;gap:8px;align-items:stretch;min-height:48px}
+.dctrl .pick{flex:1;margin-top:0;min-height:48px;padding:4px 10px}
+.dctrl .pick .tile{--tw:30px}
+.dctrl .pick.ghostpick{background:transparent;border-style:dashed}
+.dctrl .pick.ghostpick .ph{font-size:13px}
+.dctrl .cbtns{display:flex;gap:8px;flex:1;flex-wrap:nowrap}
+.dctrl .cbtns .btn{flex:1 1 0;min-height:48px;padding:0 8px;font-size:15px}
+.dctrl .cbtns .btn.chi{font-size:13px}
+.dctrl .solo-actions{flex:none;display:flex;gap:8px}
+.dctrl .solo-actions .btn{min-height:48px;padding:0 14px}
+.dctrl .solo-actions:empty{display:none}
+@media (orientation: landscape) and (max-height: 540px){
+  .dock{bottom:0;padding-bottom:env(safe-area-inset-bottom,0px)}
+  .dock-in{max-width:1000px;padding:0 max(12px,env(safe-area-inset-right,0px)) 4px max(12px,env(safe-area-inset-left,0px));--htw:min(44px, calc((100vw - 300px) / 14))}
+  .drow{flex-wrap:nowrap}
+  .drow .melds{order:0;flex:1 1 auto;min-height:0;padding-top:0;padding-bottom:15px}
+  .hand3{padding:19px 0 15px}
+  .dctrl{min-height:40px}
+  .dctrl .pick,.dctrl .cbtns .btn,.dctrl .solo-actions .btn{min-height:40px}
+  .dctrl .pick .tile{--tw:24px}
+}
+@media (orientation: landscape) and (max-height: 370px){
+  .dock-in{--htw:min(36px, calc((100vw - 300px) / 14))}
+  .hand3{padding:17px 0 14px}
+  .dctrl,.dctrl .pick,.dctrl .cbtns .btn,.dctrl .solo-actions .btn{min-height:36px}
+}
+
+
+/* 操作欄の高さを固定（牌を選んでも手牌が動かないように） */
+.dctrl{height:48px;min-height:0;overflow:hidden}
+.dctrl .pick,.dctrl .cbtns .btn,.dctrl .solo-actions .btn{height:48px;min-height:0}
+.dctrl .pick .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dctrl .pick .nm br,.dctrl .pick .nm .small{display:none}
+@media (orientation: landscape) and (max-height: 540px){
+  .dctrl,.dctrl .pick,.dctrl .cbtns .btn,.dctrl .solo-actions .btn{height:40px}
+}
+@media (orientation: landscape) and (max-height: 370px){
+  .dctrl,.dctrl .pick,.dctrl .cbtns .btn,.dctrl .solo-actions .btn{height:36px}
+}
+
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
 
@@ -1512,11 +1582,12 @@ function show(v){
   for(const x of VIEWS) $('#v-' + x).hidden = x !== v;
   document.querySelectorAll('[data-nav]').forEach(b => b.getAttribute('data-nav') === NAV_OF[v] ? b.setAttribute('aria-current','page') : b.removeAttribute('aria-current'));
   document.body.classList.toggle('solo-mode', v === 'solo');
+  if(v !== 'solo') $('#app').style.paddingBottom = '';
   window.scrollTo(0,0);
   store.set('view', NAV_OF[v]);
 }
-function goSolo(){ if(!G.wall) soloNew(); else soloRender(); show('solo'); fitRivers($('#v-solo')); if(!store.get('guideSeen', false)){ store.set('guideSeen', true); openGuide(); } }
-window.addEventListener('resize', () => { if(!$('#v-solo').hidden) fitRivers($('#v-solo')); });
+function goSolo(){ if(!G.wall) soloNew(); else soloRender(); show('solo'); fitRivers($('#v-solo')); layoutDock(); if(!store.get('guideSeen', false)){ store.set('guideSeen', true); openGuide(); } }
+window.addEventListener('resize', () => { if(!$('#v-solo').hidden){ fitRivers($('#v-solo')); layoutDock(); } });
 document.querySelectorAll('[data-nav]').forEach(b => b.addEventListener('click', () => {
   const v = b.getAttribute('data-nav');
   if(v === 'learn'){ renderLearn(); show('learn'); }
@@ -2358,7 +2429,6 @@ function tileBtn(o, idx){
 }
 function handHTML(){
   G._badged = new Set();
-  // 牌の上の数字は、おすすめ上位3つだけに出す
   G._top3 = [];
   const an = G.an;
   if(an && an.res && (G.phase === 'mine' || G.phase === 'afterCall')){
@@ -2367,15 +2437,13 @@ function handHTML(){
   }
   const h = handItems();
   let idx = 0;
-  const drawnHTML = h.drawn !== null ? `<div class="grp drawn" style="flex:1 1 0"><div class="gt">${tileBtn({t:h.drawn, drawn:true}, 99)}</div>${h.grouped ? '<span class="gl">ツモ</span>' : ''}</div>` : '';
-  if(h.grouped){
-    return `<div class="hand2">${h.groups.map(g => `<div class="grp k-${g.kind}" style="flex:${g.tiles.length} ${g.tiles.length} 0"><div class="gt">${g.tiles.map(o => tileBtn(o, idx++)).join('')}</div><span class="gl">${partLabel(g)}</span></div>`).join('')}${drawnHTML}</div>`;
-  }
-  return `<div class="hand2 plain">${h.items.map(o => `<div class="grp" style="flex:1 1 0"><div class="gt">${tileBtn(o, idx++)}</div></div>`).join('')}${drawnHTML}</div>`;
+  const groups = h.grouped ? h.groups : h.items.map(o => ({kind:'', tiles:[o]}));
+  const body = groups.map(g => `<div class="grp3 ${g.kind ? 'k-' + g.kind : ''}">${g.tiles.map(o => tileBtn(o, idx++)).join('')}${g.kind ? `<span class="gl3">${partLabel(g)}</span>` : ''}</div>`).join('');
+  const drawn = `<div class="grp3 drawn">${h.drawn !== null ? tileBtn({t:h.drawn, drawn:true}, 99) : '<div class="slot ph"></div>'}${h.drawn !== null && h.grouped ? '<span class="gl3 dl">ツモ</span>' : ''}</div>`;
+  return `<div class="hand3">${body}${drawn}</div>`;
 }
 function meldsHTML(){
-  if(!G.melds.length) return '';
-  return `<div class="melds"><span class="lab2">鳴いた牌</span>${G.melds.map(m => `<div class="meld">${m.tiles.map((t,k) => tileHTML(t, (m.type === 'ankan' && (k === 0 || k === 3)) ? 'back' : (m.called === t && k === m.tiles.indexOf(t) && m.type !== 'ankan') ? 'side' : '')).join('')}<span class="ml">${{pon:'ポン',chi:'チー',minkan:'明槓',ankan:'暗槓',kakan:'加槓'}[m.type]}</span></div>`).join('')}</div>`;
+  return `<div class="melds">${G.melds.map(m => `<div class="meld">${m.tiles.map((t,k) => tileHTML(t, (m.type === 'ankan' && (k === 0 || k === 3)) ? 'back' : (m.called === t && k === m.tiles.indexOf(t) && m.type !== 'ankan') ? 'side' : '')).join('')}<span class="ml">${{pon:'ポン',chi:'チー',minkan:'明槓',ankan:'暗槓',kakan:'加槓'}[m.type]}</span></div>`).join('')}</div>`;
 }
 function callParts(){
   const o = G.callOpt; if(!o || G.phase !== 'call') return null;
@@ -2426,6 +2494,14 @@ function fitRivers(el){
     rt.style.setProperty('--rtw', tw + 'px');
   });
 }
+function layoutDock(){
+  const app = $('#app'), dock = document.querySelector('#v-solo .dock'), nav = document.querySelector('.nav');
+  if(!dock || $('#v-solo').hidden){ app.style.paddingBottom = ''; return; }
+  const navVisible = nav && getComputedStyle(nav).display !== 'none';
+  const navH = navVisible ? nav.offsetHeight : 0;
+  document.documentElement.style.setProperty('--navh', navH + 'px');
+  app.style.paddingBottom = (dock.offsetHeight + navH + 10) + 'px';
+}
 function soloRender(){
   const el = $('#v-solo');
   const canAct = (G.phase === 'mine' || G.phase === 'afterCall') && !G.over && !G.riichi;
@@ -2436,7 +2512,7 @@ function soloRender(){
   const cp = callParts();
   const pickBar = G.over ? `<div class="pick"><span class="ph">この局は終わり</span><button class="btn slim" data-new>もう1局</button></div>`
     : selT !== null ? `<div class="pick">${tileHTML(selT)}<div class="nm"><b>${tileName(selT)}</b><br><span class="small muted">もう一度タップでも捨てられる</span></div><button class="btn slim ${G.rmode ? 'gold' : ''}" data-discard>${G.rmode ? 'リーチして捨てる' : '捨てる'}</button></div>`
-    : `<div class="pick empty"><span class="ph">${G.riichi ? 'リーチ中は自動で進む' : G.phase === 'wait' ? 'ほかの人の番…' : G.phase === 'call' ? '上のボタンで選ぶ' : G.phase === 'afterCall' ? '鳴いたので1枚捨てる' : '捨てる牌をタップして選ぶ'}</span></div>`;
+    : `<div class="pick ghostpick"><span class="ph">${G.riichi ? 'リーチ中は自動で進む' : G.phase === 'wait' ? 'ほかの人の番…' : G.phase === 'call' ? 'ボタンで選ぶ' : G.phase === 'afterCall' ? '鳴いたので1枚捨てる' : '捨てる牌をタップして選ぶ'}</span></div>`;
   const actions = [
     G.tsumoRes && G.phase === 'mine' && !G.over ? `<button class="btn red" data-tsumo>ツモ！</button>` : '',
     canRiichi ? `<button class="btn gold" data-riichi>リーチ</button>` : '',
@@ -2453,8 +2529,10 @@ function soloRender(){
     </div>
     <div class="s-status">${cp ? cp.info : ''}${hintPanel()}</div>
     <div class="s-fb">${G.fb && G.phase !== 'call' && !(G.hint && !G.riichi && (G.phase === 'mine' || G.phase === 'afterCall') && G.an && !G.tsumoRes) ? `<div class="fb ${G.fb.k}"><span class="ic">${G.fb.k === 'good' ? '◎' : G.fb.k === 'ok' ? '○' : '△'}</span><span>${G.fb.html}</span></div>` : ''}</div>
-    <div class="s-hand">${meldsHTML()}${handHTML()}</div>
-    <div class="s-ctrl">${cp ? cp.btns : pickBar}<div class="solo-actions">${actions}</div></div>
+    <div class="dock"><div class="dock-in">
+      <div class="drow">${handHTML()}${meldsHTML()}</div>
+      <div class="dctrl">${cp ? cp.btns : pickBar}<div class="solo-actions">${actions}</div></div>
+    </div></div>
     <div class="s-rest stack" style="gap:10px">
       <p class="small muted">相手3人は山からひいて捨てるだけ（鳴き・リーチ・上がりはしない）。相手の捨て牌でロン・ポン・チー・カンができる。</p>
       <div class="rotate-tip"><span class="ph"></span>スマホを横向きにすると牌が大きく見える</div>
@@ -2462,6 +2540,7 @@ function soloRender(){
     </div>
   </div>`;
   fitRivers(el);
+  layoutDock();
   el.querySelectorAll('[data-ti]').forEach(b => b.addEventListener('click', () => {
     if(!canAct) return;
     const t = +b.dataset.tt, i = +b.dataset.ti;
