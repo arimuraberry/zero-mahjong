@@ -1033,9 +1033,16 @@ function partsOf(c0, nm = 0){
     while(i < 34 && c[i] === 0) i++;
     if(i >= 34){
       const s = 8 - 2*m - Math.min(t, 4-m) - p;
-      const key = [-s, m, p, t];
+      // 同じシャンテン数なら：面子が多い → アタマあり → ブロックが多い → ターツの形が良い（両面>嵌張・対子>辺張） → 浮きが端・字牌
+      let q = 0, fq = 0;
+      for(const x of cur){
+        if(x.kind === 'taatsu'){ const [a,b] = x.tiles; q += b === a+2 ? 2 : (a%9 === 0 || b%9 === 8) ? 1 : 3; }
+        else if(x.kind === 'pair') q += 2;
+        else if(x.kind === 'float'){ const u = x.tiles[0]; fq -= u >= 27 ? 0 : (u%9 === 0 || u%9 === 8) ? 1 : (u%9 === 1 || u%9 === 7) ? 2 : 3; }
+      }
+      const key = [-s, m, p, t, q, fq];
       let better = !bestKey;
-      if(!better) for(let k = 0; k < 4; k++){ if(key[k] !== bestKey[k]){ better = key[k] > bestKey[k]; break; } }
+      if(!better) for(let k = 0; k < key.length; k++){ if(key[k] !== bestKey[k]){ better = key[k] > bestKey[k]; break; } }
       if(better){
         bestKey = key; best = {s, parts: cur.map(x => ({kind:x.kind, tiles:x.tiles.slice()}))};
       }
@@ -1061,7 +1068,9 @@ function partsOf(c0, nm = 0){
   if(nm === 0){
     let pairs = 0, kinds = 0; for(const x of c0){ if(x >= 2) pairs++; if(x >= 1) kinds++; }
     const sc = 6 - pairs + Math.max(0, 7 - kinds);
-    if(sc < best.s){
+    // 七対子は「対子が5組以上」か「普通の形より2つ以上近い」ときだけ七対子として見せる。それ以外は普通の形で見せて、メモだけ出す
+    if(sc < best.s && !(pairs >= 5 || (pairs >= 4 && sc <= best.s - 2))) best.chiitoiS = sc;
+    else if(sc < best.s){
       mode = 'chiitoi';
       const parts = [];
       c0.forEach((n,t) => { if(n >= 2){ parts.push({kind:'pair', tiles:[t,t]}); for(let k = 2; k < n; k++) parts.push({kind:'float', tiles:[t]}); } else if(n === 1) parts.push({kind:'float', tiles:[t]}); });
@@ -2251,7 +2260,9 @@ function mergeAttached(parts){
   for(const f of out){
     if(f.kind !== 'float' || f.tiles[0] >= 27) continue;
     const t = f.tiles[0];
-    const host = out.find(p => (p.kind === 'mentsu' || p.kind === 'head' || p.kind === 'pair') && !p.plus && p.tiles[0] < 27 && suitOf(p.tiles[0]) === suitOf(t) && p.tiles.some(x => Math.abs(x - t) <= 2));
+    const dist = p => Math.min(...p.tiles.map(x => Math.abs(x - t)));
+    const host = out.filter(p => (p.kind === 'mentsu' || p.kind === 'head' || p.kind === 'pair') && !p.plus && p.tiles[0] < 27 && suitOf(p.tiles[0]) === suitOf(t) && dist(p) <= 2)
+      .sort((a,b) => dist(a) - dist(b))[0];
     if(host){ host.tiles.push(t); host.tiles.sort(byNum); host.plus = 1; f.merged = true; }
   }
   return out.filter(p => !p.merged);
@@ -2386,7 +2397,7 @@ function hintPanel(){
       }).join('')}</div></div>`;
     }
   }
-  let html = `<div class="status compact ${card ? 'has-card' : ''}"><div class="hl1">${head}<span class="pchips">${form}</span></div><div class="ykout small">役：${yakuOutlook()}</div>${card}<div class="small recline">おすすめ ${inlineT([bestT])} <b>${reasonShort(bestT, pr.parts)}</b></div>`;
+  let html = `<div class="status compact ${card ? 'has-card' : ''}"><div class="hl1">${head}<span class="pchips">${form}</span></div><div class="ykout small">役：${yakuOutlook()}${pr0.chiitoiS !== undefined ? `／七対子ならあと${pr0.chiitoiS}枚` : ''}</div>${card}<div class="small recline">おすすめ ${inlineT([bestT])} <b>${reasonShort(bestT, pr.parts)}</b></div>`;
   if(an.bestS === 0){
     const c = counts(myConcealed()); c[bestT]--;
     const info = waitYakuInfo(c);
